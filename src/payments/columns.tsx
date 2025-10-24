@@ -21,4 +21,5 @@ export const columns: ColumnDef<Payment>[] = [
     accessorKey: "email",
     header: "Email",
   },
+  
 ];
