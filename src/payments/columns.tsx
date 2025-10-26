@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, ArrowUpDown } from "lucide-react";
 
 export type Payment = {
   id: string;
@@ -28,7 +28,16 @@ export const columns: ColumnDef<Payment>[] = [
 
   {
     accessorKey: "email",
-    header: "Email",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Email <ArrowUpDown className="ml-2 h-4 w-4"></ArrowUpDown>
+        </Button>
+      );
+    },
   },
   {
     accessorKey: "amount",
