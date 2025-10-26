@@ -74,7 +74,7 @@ export function DataTable<TData, TValue>({
             <Spinner></Spinner>
           </ItemMedia>
           <ItemContent>
-            <ItemTitle>Table Loading...</ItemTitle>
+            <ItemTitle>Loading Table...</ItemTitle>
           </ItemContent>
         </Item>
       ) : (
