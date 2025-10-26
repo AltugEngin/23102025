@@ -14,6 +14,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { supabase } from "@/supabaseClient";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
@@ -23,10 +26,22 @@ export function DataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
+  const queryClient = useQueryClient();
+  const { mutate } = useMutation({
+    mutationFn: async (id) =>
+      await supabase.from("payment").delete().eq("id", id).select(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+    },
+  });
+
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    meta: {
+      deleteRow: (id) => mutate(id),
+    },
   });
 
   return (

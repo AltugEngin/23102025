@@ -17,8 +17,7 @@ export default function Demo() {
     queryFn: fetchPosts,
   });
 
-  //const [datak, setDatak] = useState(data);
-  console.log(data);
+  //console.log(data);
   return (
     <div className="container mx-auto py-10">
       {isLoading ? (
