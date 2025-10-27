@@ -62,6 +62,12 @@ export function DataTable<TData, TValue>({
       queryClient.invalidateQueries({ queryKey: ["payment"], data });
     },
   });
+  const insertRecord = async () =>
+    await supabase.from("payment").insert({
+      amount: 100000,
+      status: "pending",
+      email: "altugengin@mynet.com",
+    });
 
   const table = useReactTable({
     data,
@@ -107,6 +113,13 @@ export function DataTable<TData, TValue>({
                 table.getColumn("email")?.setFilterValue(event.target.value)
               }
             ></Input>
+            <Button
+              className="ml-auto"
+              variant="outline"
+              onClick={insertRecord}
+            >
+              Add Record
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="ml-auto">
