@@ -44,30 +44,37 @@ const fetchPosts = async (): Promise<Payment[]> => {
   return data as Payment[];
 };
 
+const insertRecord = async () =>
+  await supabase.from("payment").insert({
+    amount: 100000,
+    status: "pending",
+    email: "altugengin@mynet.com",
+  });
+
 export function DataTable<TData, TValue>({
   columns,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["payment"],
     queryFn: fetchPosts,
   });
-  const { mutate } = useMutation({
+  const deleteRecordMutation = useMutation({
     mutationFn: async (id) =>
       await supabase.from("payment").delete().eq("id", id).select(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payment"], data });
     },
   });
-  const insertRecord = async () =>
-    await supabase.from("payment").insert({
-      amount: 100000,
-      status: "pending",
-      email: "altugengin@mynet.com",
-    });
+
+  const insertRecordMutation = useMutation({
+    mutationFn: insertRecord,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payment"] }),
+  });
 
   const table = useReactTable({
     data,
@@ -85,7 +92,7 @@ export function DataTable<TData, TValue>({
       columnVisibility,
     },
     meta: {
-      deleteRow: (id) => mutate(id),
+      deleteRow: (id) => deleteRecordMutation.mutate(id),
     },
   });
 
@@ -116,7 +123,7 @@ export function DataTable<TData, TValue>({
             <Button
               className="ml-auto"
               variant="outline"
-              onClick={insertRecord}
+              onClick={() => insertRecordMutation.mutate()}
             >
               Add Record
             </Button>
