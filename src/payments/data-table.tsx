@@ -51,6 +51,15 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectItem,
+  SelectTrigger,
+  SelectGroup,
+  SelectValue,
+  SelectLabel,
+  SelectContent,
+} from "@/components/ui/select";
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   //data: TData[];
@@ -60,15 +69,17 @@ const formSchema = z.object({
   status: z.literal(["pending", "processing", "success", "failed"]),
   amount: z.coerce.number().max(10000, "Amount must be at most 10000$"),
   email: z.email(),
+  company_name: z.null(),
 });
 
-function RecordAddForm({ setRecordData }) {
+function RecordAddForm({ setRecordData, companyData }) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       status: "success",
       amount: 100,
       email: "altugengin@yahoo.com",
+      company_name: null,
     },
   });
 
@@ -144,6 +155,36 @@ function RecordAddForm({ setRecordData }) {
                 </Field>
               )}
             ></Controller>
+            <Controller
+              name="company_name"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="form-rhf-demo-amount">
+                    Company
+                  </FieldLabel>
+                  <Select>
+                    <SelectTrigger className="w-[280px]">
+                      <SelectValue placeholder="Select a company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Companies</SelectLabel>
+
+                        {companyData.map((value) => (
+                          <SelectItem value={value.company_name}>
+                            {value.company_name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]}></FieldError>
+                  )}
+                </Field>
+              )}
+            ></Controller>
           </FieldGroup>
         </form>
       </CardContent>
@@ -173,10 +214,22 @@ export function DataTable<TData, TValue>({
     return data as Payment[];
   };
 
+  const fetchCompanies = async (): Promise<Payment[]> => {
+    const { data } = await supabase.from("company").select("*");
+    return data as Payment[];
+  };
+
   const { data, isLoading } = useQuery({
     queryKey: ["payment"],
     queryFn: fetchPosts,
   });
+
+  const companyData = useQuery({
+    queryKey: ["company"],
+    queryFn: fetchCompanies,
+  });
+
+  //console.log(companyData.data);
   const deleteRecordMutation = useMutation({
     mutationFn: async (id) =>
       await supabase.from("payment").delete().eq("id", id).select(),
@@ -232,7 +285,11 @@ export function DataTable<TData, TValue>({
         </Item>
       ) : (
         <div>
-          <RecordAddForm setRecordData={setRecordData}></RecordAddForm>
+          <RecordAddForm
+            setRecordData={setRecordData}
+            companyData={companyData.data}
+          ></RecordAddForm>
+
           <div className="flex items-center py-4">
             <Input
               className="max-w-sm"

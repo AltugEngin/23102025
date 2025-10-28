@@ -18,9 +18,14 @@ export type Payment = {
   amount: number;
   status: "pending" | "processing" | "success" | "failed";
   email: string;
+  company_name: string;
 };
 
 export const columns: ColumnDef<Payment>[] = [
+  {
+    accessorKey: "company_name",
+    header: "Company",
+  },
   {
     accessorKey: "id",
     header: ({ column }) => {
