@@ -1,4 +1,21 @@
 "use client";
+import { useForm, Controller } from "react-hook-form";
+import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 
 import {
   flexRender,
@@ -25,7 +42,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/supabaseClient";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { type Payment } from "./columns";
 import { Input } from "@/components/ui/input";
 import {
@@ -39,26 +56,123 @@ interface DataTableProps<TData, TValue> {
   //data: TData[];
 }
 
-const fetchPosts = async (): Promise<Payment[]> => {
-  const { data } = await supabase.from("payment").select("*");
-  return data as Payment[];
-};
+const formSchema = z.object({
+  status: z.literal(["pending", "processing", "success", "failed"]),
+  amount: z.coerce.number().max(10000, "Amount must be at most 10000$"),
+  email: z.email(),
+});
 
-const insertRecord = async () =>
-  await supabase.from("payment").insert({
-    amount: 100000,
-    status: "pending",
-    email: "altugengin@mynet.com",
+function RecordAddForm({ setRecordData }) {
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      status: "success",
+      amount: 100,
+      email: "altugengin@yahoo.com",
+    },
   });
+
+  const onSubmit = (data: z.infer<typeof formSchema>) => {
+    setRecordData(data);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Add New Record</CardTitle>
+        <CardDescription>
+          Enter device details which is to be sent to repair.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form id="form-rhf-demo" onSubmit={form.handleSubmit(onSubmit)}>
+          <FieldGroup>
+            <Controller
+              name="status"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="form-rhf-demo-status">Status</FieldLabel>
+                  <Input
+                    {...field}
+                    id="form-rhf-demo-status"
+                    aria-invalid={fieldState.invalid}
+                    placeholder="success"
+                    autoComplete="off"
+                  ></Input>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]}></FieldError>
+                  )}
+                </Field>
+              )}
+            ></Controller>
+            <Controller
+              name="email"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="form-rhf-demo-email">Email</FieldLabel>
+                  <Input
+                    {...field}
+                    id="form-rhf-demo-email"
+                    aria-invalid={fieldState.invalid}
+                    placeholder="altugengin@yahoo.com"
+                    autoComplete="off"
+                  ></Input>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]}></FieldError>
+                  )}
+                </Field>
+              )}
+            ></Controller>
+            <Controller
+              name="amount"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="form-rhf-demo-amount">Amount</FieldLabel>
+                  <Input
+                    {...field}
+                    id="form-rhf-demo-amount"
+                    aria-invalid={fieldState.invalid}
+                    placeholder="100"
+                    autoComplete="off"
+                  ></Input>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]}></FieldError>
+                  )}
+                </Field>
+              )}
+            ></Controller>
+          </FieldGroup>
+        </form>
+      </CardContent>
+      <CardFooter>
+        <Field orientation="horizontal">
+          <Button type="submit" form="form-rhf-demo">
+            Submit
+          </Button>
+        </Field>
+      </CardFooter>
+    </Card>
+  );
+}
 
 export function DataTable<TData, TValue>({
   columns,
 }: DataTableProps<TData, TValue>) {
+  const [recordData, setRecordData] = useState({});
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
   const queryClient = useQueryClient();
+
+  const fetchPosts = async (): Promise<Payment[]> => {
+    const { data } = await supabase.from("payment").select("*");
+    return data as Payment[];
+  };
+
   const { data, isLoading } = useQuery({
     queryKey: ["payment"],
     queryFn: fetchPosts,
@@ -70,12 +184,21 @@ export function DataTable<TData, TValue>({
       queryClient.invalidateQueries({ queryKey: ["payment"], data });
     },
   });
+  const insertRecord = async () =>
+    await supabase.from("payment").insert({
+      amount: recordData.amount,
+      status: recordData.status,
+      email: recordData.email,
+    });
 
   const insertRecordMutation = useMutation({
     mutationFn: insertRecord,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payment"] }),
   });
 
+  useEffect(() => insertRecordMutation.mutate(), [recordData]);
+
+  //console.log(recordData.amount);
   const table = useReactTable({
     data,
     columns,
@@ -109,6 +232,7 @@ export function DataTable<TData, TValue>({
         </Item>
       ) : (
         <div>
+          <RecordAddForm setRecordData={setRecordData}></RecordAddForm>
           <div className="flex items-center py-4">
             <Input
               className="max-w-sm"
@@ -120,17 +244,18 @@ export function DataTable<TData, TValue>({
                 table.getColumn("email")?.setFilterValue(event.target.value)
               }
             ></Input>
-            <Button
+            {/**<Button
               className="ml-auto"
               variant="outline"
               onClick={() => insertRecordMutation.mutate()}
             >
               Add Record
-            </Button>
+            </Button> */}
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="ml-auto">
-                  Columns
+                  Select Columns
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

@@ -23,7 +23,16 @@ export type Payment = {
 export const columns: ColumnDef<Payment>[] = [
   {
     accessorKey: "id",
-    header: "ID",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          ID <ArrowUpDown className="ml-2 h-4 w-4"></ArrowUpDown>
+        </Button>
+      );
+    },
   },
   {
     accessorKey: "status",
