@@ -1,4 +1,6 @@
 "use client";
+import React from "react";
+import { Plus, Minus } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -72,7 +74,12 @@ const formSchema = z.object({
   company_name: z.string(),
 });
 
-function RecordAddForm({ setRecordData, companyData }) {
+type RecordAddFormProps = {
+  setRecordData: React.Dispatch<React.SetStateAction<Partial<Payment>>>;
+  companyData?: Payment[];
+};
+
+function RecordAddForm({ setRecordData, companyData }: RecordAddFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -210,7 +217,7 @@ export function DataTable<TData, TValue>({
   columns,
 }: DataTableProps<TData, TValue>) {
   const [addScreen, setAddScreen] = useState(false);
-  const [recordData, setRecordData] = useState({});
+  const [recordData, setRecordData] = useState<Partial<Payment>>({});
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -239,26 +246,28 @@ export function DataTable<TData, TValue>({
 
   //console.log(companyData.data);
   const deleteRecordMutation = useMutation({
-    mutationFn: async (id) =>
+    mutationFn: async (id: number) =>
       await supabase.from("payment").delete().eq("id", id).select(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["payment"], data });
+      queryClient.invalidateQueries({ queryKey: ["payment"] });
     },
   });
-  const insertRecord = async () =>
+  const insertRecord = async (payload: Partial<Payment>) => {
     await supabase.from("payment").insert({
-      amount: recordData.amount,
-      status: recordData.status,
-      email: recordData.email,
-      company_name: recordData.company_name,
+      amount: payload.amount,
+      status: payload.status,
+      email: payload.email,
+      company_name: payload.company_name,
     });
-
+  };
   const insertRecordMutation = useMutation({
     mutationFn: insertRecord,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payment"] }),
   });
 
-  useEffect(() => insertRecordMutation.mutate(), [recordData]);
+  useEffect(() => {
+    insertRecordMutation.mutate(recordData);
+  }, [recordData]);
 
   const table = useReactTable({
     data,
@@ -276,7 +285,7 @@ export function DataTable<TData, TValue>({
       columnVisibility,
     },
     meta: {
-      deleteRow: (id) => deleteRecordMutation.mutate(id),
+      deleteRow: (id: number) => deleteRecordMutation.mutate(id),
     },
   });
 
@@ -318,7 +327,7 @@ export function DataTable<TData, TValue>({
               variant="outline"
               onClick={() => setAddScreen((e) => !e)}
             >
-              Add Record
+              {addScreen ? <Minus></Minus> : <Plus></Plus>}
             </Button>
 
             <DropdownMenu>
