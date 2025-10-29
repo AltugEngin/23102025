@@ -69,7 +69,7 @@ const formSchema = z.object({
   status: z.literal(["pending", "processing", "success", "failed"]),
   amount: z.coerce.number().max(10000, "Amount must be at most 10000$"),
   email: z.email(),
-  company_name: z.null(),
+  company_name: z.string(),
 });
 
 function RecordAddForm({ setRecordData, companyData }) {
@@ -79,7 +79,7 @@ function RecordAddForm({ setRecordData, companyData }) {
       status: "success",
       amount: 100,
       email: "altugengin@yahoo.com",
-      company_name: null,
+      company_name: "",
     },
   });
 
@@ -160,11 +160,18 @@ function RecordAddForm({ setRecordData, companyData }) {
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="form-rhf-demo-amount">
+                  <FieldLabel htmlFor="form-rhf-demo-company">
                     Company
                   </FieldLabel>
-                  <Select>
-                    <SelectTrigger className="w-[280px]">
+                  <Select
+                    name={field.name}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger
+                      className="w-[280px]"
+                      aria-invalid={fieldState.invalid}
+                    >
                       <SelectValue placeholder="Select a company" />
                     </SelectTrigger>
                     <SelectContent>
@@ -202,6 +209,7 @@ function RecordAddForm({ setRecordData, companyData }) {
 export function DataTable<TData, TValue>({
   columns,
 }: DataTableProps<TData, TValue>) {
+  const [addScreen, setAddScreen] = useState(false);
   const [recordData, setRecordData] = useState({});
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -242,6 +250,7 @@ export function DataTable<TData, TValue>({
       amount: recordData.amount,
       status: recordData.status,
       email: recordData.email,
+      company_name: recordData.company_name,
     });
 
   const insertRecordMutation = useMutation({
@@ -251,7 +260,7 @@ export function DataTable<TData, TValue>({
 
   useEffect(() => insertRecordMutation.mutate(), [recordData]);
 
-  //console.log(recordData.amount);
+  console.log(addScreen);
   const table = useReactTable({
     data,
     columns,
@@ -285,10 +294,14 @@ export function DataTable<TData, TValue>({
         </Item>
       ) : (
         <div>
-          <RecordAddForm
-            setRecordData={setRecordData}
-            companyData={companyData.data}
-          ></RecordAddForm>
+          {addScreen ? (
+            <RecordAddForm
+              setRecordData={setRecordData}
+              companyData={companyData.data}
+            ></RecordAddForm>
+          ) : (
+            <div></div>
+          )}
 
           <div className="flex items-center py-4">
             <Input
@@ -301,13 +314,13 @@ export function DataTable<TData, TValue>({
                 table.getColumn("email")?.setFilterValue(event.target.value)
               }
             ></Input>
-            {/**<Button
+            <Button
               className="ml-auto"
               variant="outline"
-              onClick={() => insertRecordMutation.mutate()}
+              onClick={() => setAddScreen((e) => !e)}
             >
               Add Record
-            </Button> */}
+            </Button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
