@@ -260,7 +260,6 @@ export function DataTable<TData, TValue>({
 
   useEffect(() => insertRecordMutation.mutate(), [recordData]);
 
-  console.log(addScreen);
   const table = useReactTable({
     data,
     columns,

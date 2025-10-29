@@ -1,9 +1,28 @@
-import Demo from "./payments/page";
+import { MenubarItem, MenubarMenu } from "@radix-ui/react-menubar";
+import {
+  Menubar,
+  MenubarContent,
+  MenubarTrigger,
+} from "./components/ui/menubar";
+
+import { Outlet, useNavigate } from "react-router";
 
 function App() {
+  const navigate = useNavigate();
   return (
     <div>
-      <Demo></Demo>
+      <Menubar>
+        <MenubarMenu>
+          <MenubarTrigger>Applications</MenubarTrigger>
+          <MenubarContent>
+            <MenubarItem onClick={() => navigate("/repair")}>
+              Repair
+            </MenubarItem>
+            <MenubarItem onClick={() => navigate("/")}>Home</MenubarItem>
+          </MenubarContent>
+        </MenubarMenu>
+      </Menubar>
+      <Outlet></Outlet>
     </div>
   );
 }
