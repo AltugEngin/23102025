@@ -1,8 +1,8 @@
 //REACT
-import { useState,useEffect } from "react";
+import { useState, useEffect } from "react";
 
 // REACT-HOOK-FORM
-import * as z from "zod"
+import * as z from "zod";
 import { Controller } from "react-hook-form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,13 +11,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/supabaseClient";
 
 // TANSTACK QUERY
-import { useQuery,useMutation,useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 
 // TANSTACK TABLE
 import {
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
+  getPaginationRowModel,
   useReactTable,
   type ColumnDef,
   flexRender,
@@ -34,32 +40,67 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
-import { Item,ItemMedia,ItemContent,ItemTitle } from "@/components/ui/item";
-import { Field,FieldGroup,FieldLabel,FieldError } from "@/components/ui/field";
+import { Item, ItemMedia, ItemContent, ItemTitle } from "@/components/ui/item";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldError,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { Select,SelectTrigger,SelectContent,SelectValue,SelectLabel,SelectGroup,SelectItem } from "@/components/ui/select";
-import { Dialog, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,DialogContent,DialogFooter,DialogClose } from "@/components/ui/dialog";
-import { DropdownMenu,DropdownMenuTrigger,DropdownMenuContent,DropdownMenuItem,DropdownMenuLabel,DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectValue,
+  SelectLabel,
+  SelectGroup,
+  SelectItem,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogContent,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 // LUCIDE REACT
-import { Plus,MoreHorizontal,ArrowUpDown } from "lucide-react";
+import { Plus, MoreHorizontal, ArrowUpDown } from "lucide-react";
 
 //-----------------------------------------------------------------------------------------------------------------------------
 
-
 type Repair = {
   id: string;
-  created_at: string;
+  created_at: Date;
   description: string;
   sent_to: string;
   price: number;
   status: "pending" | "processing" | "success" | "failed";
 };
 
+type Supplier = {
+  id?: string;
+  company_name: string;
+};
+
 const columns: ColumnDef<Repair>[] = [
-  { accessorKey: "id",  header: ({ column }) => {
+  {
+    accessorKey: "id",
+    header: ({ column }) => {
       return (
         <Button
           variant="ghost"
@@ -68,10 +109,13 @@ const columns: ColumnDef<Repair>[] = [
           ID <ArrowUpDown className="ml-2 h-4 w-4"></ArrowUpDown>
         </Button>
       );
-    }, },
+    },
+  },
   { accessorKey: "created_at", header: "Date" },
   { accessorKey: "description", header: "Description" },
-  { accessorKey: "sent_to", header: ({ column }) => {
+  {
+    accessorKey: "sent_to",
+    header: ({ column }) => {
       return (
         <Button
           variant="ghost"
@@ -80,8 +124,11 @@ const columns: ColumnDef<Repair>[] = [
           ID <ArrowUpDown className="ml-2 h-4 w-4"></ArrowUpDown>
         </Button>
       );
-    }, },
-  { accessorKey: "price", header: () => <div className="text-right">Price</div>,
+    },
+  },
+  {
+    accessorKey: "price",
+    header: () => <div className="text-right">Price</div>,
     cell: ({ row }) => {
       const price = parseFloat(row.getValue("price"));
       const formattedPrice = new Intl.NumberFormat("en-US", {
@@ -89,7 +136,8 @@ const columns: ColumnDef<Repair>[] = [
         currency: "USD",
       }).format(price);
       return <div className="text-right font-medium">{formattedPrice}</div>;
-    }, },
+    },
+  },
   { accessorKey: "status", header: "Status" },
   {
     id: "actions",
@@ -112,7 +160,13 @@ const columns: ColumnDef<Repair>[] = [
             </DropdownMenuItem>
             <DropdownMenuSeparator></DropdownMenuSeparator>
             <DropdownMenuItem
-              onClick={() => table.options.meta?.deleteRepairData(repair.id)}
+              onClick={() =>
+                (
+                  table.options.meta as {
+                    deleteRepairData?: (id: string) => void;
+                  }
+                ).deleteRepairData?.(repair.id)
+              }
             >
               Delete
             </DropdownMenuItem>
@@ -124,14 +178,26 @@ const columns: ColumnDef<Repair>[] = [
 ];
 
 const repairFormSchema = z.object({
-  status: z.literal(["pending", "processing", "success", "failed"]),
+  status: z.enum(["pending", "processing", "success", "failed"]),
   price: z.coerce.number(),
-  description: z.string().nonempty(), 
+  description: z.string().nonempty(),
   sent_to: z.string().nonempty(),
 });
 
-function RepairForm_AddDialog({setWriteFormData,supplierData}){
-  const form = useForm<z.infer<typeof repairFormSchema>>({
+type RepairFormInput = z.input<typeof repairFormSchema>;
+
+type RepairFormProps = {
+  setWriteFormData: React.Dispatch<
+    React.SetStateAction<Partial<RepairFormInput>>
+  >;
+  supplierData?: UseQueryResult<Supplier[] | null, unknown>;
+};
+
+function RepairForm_AddDialog({
+  setWriteFormData,
+  supplierData,
+}: RepairFormProps) {
+  const form = useForm<RepairFormInput>({
     resolver: zodResolver(repairFormSchema),
     defaultValues: {
       status: "success",
@@ -141,26 +207,31 @@ function RepairForm_AddDialog({setWriteFormData,supplierData}){
     },
   });
 
-  const onSubmit = (data: z.infer<typeof repairFormSchema>) => {
+  const onSubmit = (data: RepairFormInput) => {
     setWriteFormData(data);
   };
-  return(<Dialog>
-    <form id="form-rhf-demo-dialog" onSubmit={form.handleSubmit(onSubmit)}>
-      <DialogTrigger asChild>
-        <Button variant="outline"><Plus></Plus></Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Add Record</DialogTitle>
-          <DialogDescription>Enter repair details</DialogDescription>
-        </DialogHeader>
-        <FieldGroup>
+  return (
+    <Dialog>
+      <form id="form-rhf-demo-dialog" onSubmit={form.handleSubmit(onSubmit)}>
+        <DialogTrigger asChild>
+          <Button variant="outline">
+            <Plus></Plus>
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add Record</DialogTitle>
+            <DialogDescription>Enter repair details</DialogDescription>
+          </DialogHeader>
+          <FieldGroup>
             <Controller
               name="description"
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="form-rhf-demo-dialog-description">Description</FieldLabel>
+                  <FieldLabel htmlFor="form-rhf-demo-dialog-description">
+                    Description
+                  </FieldLabel>
                   <Input
                     {...field}
                     id="form-rhf-demo-description"
@@ -179,7 +250,9 @@ function RepairForm_AddDialog({setWriteFormData,supplierData}){
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="form-rhf-demo-dialog-status">Status</FieldLabel>
+                  <FieldLabel htmlFor="form-rhf-demo-dialog-status">
+                    Status
+                  </FieldLabel>
                   <Input
                     {...field}
                     id="form-rhf-demo-status"
@@ -198,13 +271,17 @@ function RepairForm_AddDialog({setWriteFormData,supplierData}){
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="form-rhf-demo-dialog-price">Price</FieldLabel>
+                  <FieldLabel htmlFor="form-rhf-demo-dialog-price">
+                    Price
+                  </FieldLabel>
                   <Input
                     {...field}
                     id="form-rhf-demo-price"
                     aria-invalid={fieldState.invalid}
                     placeholder="100"
                     autoComplete="off"
+                    value={(field.value ?? "") as unknown as string | number}
+                    onChange={(e) => field.onChange(e.target.value)}
                   ></Input>
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]}></FieldError>
@@ -235,8 +312,8 @@ function RepairForm_AddDialog({setWriteFormData,supplierData}){
                       <SelectGroup>
                         <SelectLabel>Supplier</SelectLabel>
 
-                        {supplierData.data?.map((value) => (
-                          <SelectItem value={value.company_name}>
+                        {supplierData?.data?.map((value, k) => (
+                          <SelectItem value={value.company_name} key={k}>
                             {value.company_name}
                           </SelectItem>
                         ))}
@@ -250,34 +327,35 @@ function RepairForm_AddDialog({setWriteFormData,supplierData}){
               )}
             ></Controller>
           </FieldGroup>
-           <DialogFooter className="sm:justify-start">
-          <DialogClose asChild>
-            <Button type="button" variant="secondary">
-              Close
+          <DialogFooter className="sm:justify-start">
+            <DialogClose asChild>
+              <Button type="button" variant="secondary">
+                Close
+              </Button>
+            </DialogClose>
+            <Button type="submit" form="form-rhf-demo-dialog">
+              Submit
             </Button>
-          </DialogClose>
-          <Button type="submit" form="form-rhf-demo-dialog">Submit</Button>
-        </DialogFooter>
-      </DialogContent>
-    </form>
-  </Dialog>)
+          </DialogFooter>
+        </DialogContent>
+      </form>
+    </Dialog>
+  );
 }
-
-
 
 export default function Repair() {
   const queryClient = useQueryClient();
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [writeFormData,setWriteFormData]=useState({})
+  const [writeFormData, setWriteFormData] = useState({});
 
   const fetchRepairs = async (): Promise<Repair[]> => {
     const { data } = await supabase.from("repair").select("*");
     return data as Repair[];
   };
   const fetchSuppliers = async () => {
-      const { data } = await supabase.from("company").select("*");
-      return data;
+    const { data } = await supabase.from("company").select("*");
+    return data;
   };
 
   const { data = [], isLoading } = useQuery({
@@ -286,17 +364,17 @@ export default function Repair() {
   });
 
   const supplierData = useQuery({
-      queryKey: ["company"],
-      queryFn: fetchSuppliers,
-    });
+    queryKey: ["company"],
+    queryFn: fetchSuppliers,
+  });
 
   const insertRepairData = async (payload: Partial<Repair>) => {
-      await supabase.from("repair").insert({
-        price: payload.price,
-        status: payload.status,
-        description: payload.description,
-        sent_to: payload.sent_to,
-      });
+    await supabase.from("repair").insert({
+      price: payload.price,
+      status: payload.status,
+      description: payload.description,
+      sent_to: payload.sent_to,
+    });
   };
 
   const insertRepairDataMutation = useMutation({
@@ -305,17 +383,16 @@ export default function Repair() {
   });
 
   const deleteRecordMutation = useMutation({
-      mutationFn: async (id: number) =>
-        await supabase.from("repair").delete().eq("id", id).select(),
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["repair"] });
-      },
-    });
+    mutationFn: async (id: number) =>
+      await supabase.from("repair").delete().eq("id", id).select(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["repair"] });
+    },
+  });
 
-
-   useEffect(() => {
-      insertRepairDataMutation.mutate(writeFormData);
-    }, [writeFormData]);
+  useEffect(() => {
+    insertRepairDataMutation.mutate(writeFormData);
+  }, [writeFormData]);
 
   const table = useReactTable({
     data,
@@ -325,13 +402,14 @@ export default function Repair() {
     getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     meta: {
       deleteRepairData: (id: number) => deleteRecordMutation.mutate(id),
     },
-    state:{
+    state: {
       columnFilters,
-      sorting
-    }
+      sorting,
+    },
   });
 
   return (
@@ -349,17 +427,21 @@ export default function Repair() {
         <div>
           <div className="flex items-center py-4">
             <span className="ml-auto">
-
-            <RepairForm_AddDialog setWriteFormData={setWriteFormData} supplierData={supplierData}></RepairForm_AddDialog>
+              <RepairForm_AddDialog
+                setWriteFormData={setWriteFormData}
+                supplierData={supplierData}
+              ></RepairForm_AddDialog>
             </span>
-             <Input className="max-w-sm" placeholder="Filter suppliers..." 
-             value={
-                            (table.getColumn("sent_to")?.getFilterValue() as string) ?? ""
-                          }
-             onChange={(event) =>
-                            table.getColumn("sent_to")?.setFilterValue(event.target.value)
-                          }
-                        ></Input>
+            <Input
+              className="max-w-sm"
+              placeholder="Filter suppliers..."
+              value={
+                (table.getColumn("sent_to")?.getFilterValue() as string) ?? ""
+              }
+              onChange={(event) =>
+                table.getColumn("sent_to")?.setFilterValue(event.target.value)
+              }
+            ></Input>
           </div>
           <div className="overflow-hidden rounded-md border">
             <Table>
@@ -410,6 +492,24 @@ export default function Repair() {
                 )}
               </TableBody>
             </Table>
+            <div className="flex items-center justify-end space-x-2 py-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </div>
       )}

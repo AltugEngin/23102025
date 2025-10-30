@@ -18,9 +18,7 @@ function App() {
             <MenubarItem onClick={() => navigate("/repair")}>
               Repair
             </MenubarItem>
-            <MenubarItem onClick={() => navigate("/demo")}>
-              Repair Demo
-            </MenubarItem>
+
             <MenubarItem onClick={() => navigate("/")}>Home</MenubarItem>
           </MenubarContent>
         </MenubarMenu>
