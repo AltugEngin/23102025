@@ -121,7 +121,7 @@ const columns: ColumnDef<Repair>[] = [
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          ID <ArrowUpDown className="ml-2 h-4 w-4"></ArrowUpDown>
+          Supplier <ArrowUpDown className="ml-2 h-4 w-4"></ArrowUpDown>
         </Button>
       );
     },
