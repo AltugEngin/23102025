@@ -1,16 +1,11 @@
-import { MenubarItem, MenubarMenu } from "@radix-ui/react-menubar";
-import {
-  Menubar,
-  MenubarContent,
-  MenubarTrigger,
-} from "./components/ui/menubar";
+
 
 import SignIn from "./SignIn";
 
-import { Outlet, useNavigate } from "react-router";
+
 
 function App() {
-  const navigate = useNavigate();
+  
   return (
     <div>
       <SignIn></SignIn>

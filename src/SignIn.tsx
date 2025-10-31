@@ -24,12 +24,9 @@ export default function SignIn() {
     })
 
     async function onSubmit(data:z.infer<typeof signInFormSchema>){
-        const {error}=await signInWithEmail(data)
-         if (error) {
-      throw new Error(error.message);
-    } else {
+        await signInWithEmail(data)
       navigate("/repair");
-    }
+    
     }
 
 
