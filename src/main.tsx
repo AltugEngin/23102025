@@ -1,14 +1,27 @@
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import App from "./App.tsx";
 
-import Home from "./Home.tsx";
-import Repair from "./Repair.tsx";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter } from "react-router";
-import { Route, Routes } from "react-router";
+import { RouterProvider } from "react-router";
+
+import { AuthContextProvider } from "./AuthContext.tsx";
+import {router} from "./router.tsx"
 
 const client = new QueryClient();
+
+createRoot(document.getElementById("root")!).render(
+  <QueryClientProvider client={client}>
+    <AuthContextProvider>
+      <RouterProvider router={router}></RouterProvider>
+      
+    </AuthContextProvider>
+    
+  </QueryClientProvider>
+);
+
+
+
+/*
 
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={client}>
@@ -23,3 +36,5 @@ createRoot(document.getElementById("root")!).render(
     </BrowserRouter>
   </QueryClientProvider>
 );
+
+*/

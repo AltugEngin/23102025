@@ -5,7 +5,22 @@ import {
   MenubarTrigger,
 } from "./components/ui/menubar";
 
+import SignIn from "./SignIn";
+
 import { Outlet, useNavigate } from "react-router";
+
+function App() {
+  const navigate = useNavigate();
+  return (
+    <div>
+      <SignIn></SignIn>
+    </div>
+  );
+}
+
+export default App;
+
+/*
 
 function App() {
   const navigate = useNavigate();
@@ -28,4 +43,4 @@ function App() {
   );
 }
 
-export default App;
+*/

@@ -97,6 +97,7 @@ type Supplier = {
   company_name: string;
 };
 
+
 const columns: ColumnDef<Repair>[] = [
   {
     accessorKey: "id",
@@ -170,6 +171,17 @@ const columns: ColumnDef<Repair>[] = [
             >
               Delete
             </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() =>
+                (
+                  table.options.meta as {
+                    approveRepairData?: (id: string) => void;
+                  }
+                ).approveRepairData?.(repair.id)
+              }
+            >
+              Approve
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -193,14 +205,19 @@ type RepairFormProps = {
   supplierData?: UseQueryResult<Supplier[] | null, unknown>;
 };
 
+
+
+
+
 function RepairForm_AddDialog({
   setWriteFormData,
   supplierData,
 }: RepairFormProps) {
+  
   const form = useForm<RepairFormInput>({
     resolver: zodResolver(repairFormSchema),
     defaultValues: {
-      status: "success",
+      status: "pending",
       price: 100,
       description: "",
       sent_to: "",
@@ -209,7 +226,9 @@ function RepairForm_AddDialog({
 
   const onSubmit = (data: RepairFormInput) => {
     setWriteFormData(data);
+    
   };
+  
   return (
     <Dialog>
       <form id="form-rhf-demo-dialog" onSubmit={form.handleSubmit(onSubmit)}>
@@ -257,8 +276,9 @@ function RepairForm_AddDialog({
                     {...field}
                     id="form-rhf-demo-status"
                     aria-invalid={fieldState.invalid}
-                    placeholder="success"
+                    placeholder="pending"
                     autoComplete="off"
+                    disabled
                   ></Input>
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]}></FieldError>
@@ -332,6 +352,8 @@ function RepairForm_AddDialog({
               <Button type="button" variant="secondary">
                 Close
               </Button>
+              
+              
             </DialogClose>
             <Button type="submit" form="form-rhf-demo-dialog">
               Submit
@@ -345,6 +367,7 @@ function RepairForm_AddDialog({
 
 export default function Repair() {
   const queryClient = useQueryClient();
+  
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [writeFormData, setWriteFormData] = useState({});
@@ -377,9 +400,18 @@ export default function Repair() {
     });
   };
 
+
+  const approveRepairDataMutation=useMutation({
+    mutationFn: async(id:number)=>await supabase.from("repair").update({status:"success"}).eq("id",id).select(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["repair"] })
+})
+
+  
+
   const insertRepairDataMutation = useMutation({
     mutationFn: insertRepairData,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["repair"] }),
+  
   });
 
   const deleteRecordMutation = useMutation({
@@ -405,6 +437,7 @@ export default function Repair() {
     getPaginationRowModel: getPaginationRowModel(),
     meta: {
       deleteRepairData: (id: number) => deleteRecordMutation.mutate(id),
+      approveRepairData: (id:number)=>approveRepairDataMutation.mutate(id)
     },
     state: {
       columnFilters,
